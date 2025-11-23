@@ -118,19 +118,50 @@
 
         .icon { width: 18px; height: 18px; fill: currentColor; }
 
-        /* --- 1. 首页 --- */
+        /* --- 1. 首页 (背景轮播修改) --- */
         #home-hero {
             height: 80vh; 
-            background: linear-gradient(rgba(0,0,0,0.5), rgba(11,11,11,1)), 
-                        url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2070&auto=format&fit=crop');
-            background-size: cover;
-            background-position: center;
+            position: relative; /* 必须设置相对定位 */
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             text-align: center;
             padding-top: 80px;
+            overflow: hidden; /* 隐藏溢出的图片 */
+        }
+
+        /* 背景轮播容器 */
+        .hero-bg {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 0; /* 在最底层 */
+        }
+
+        .hero-bg img {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            object-fit: cover;
+            opacity: 0;
+            transition: opacity 1.5s ease-in-out; /* 平滑淡入淡出 */
+        }
+
+        .hero-bg img.active {
+            opacity: 1;
+        }
+
+        /* 黑色遮罩层，保证文字清晰 */
+        .hero-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(0,0,0,0.3), rgba(11,11,11,1));
+            z-index: 1;
+        }
+
+        /* 文字内容容器 */
+        .hero-content {
+            position: relative;
+            z-index: 2; /* 在图片和遮罩之上 */
         }
 
         h1.hero-title {
@@ -151,6 +182,8 @@
             color: #ccc;
             max-width: 600px;
             margin-bottom: 40px;
+            margin-left: auto;
+            margin-right: auto;
         }
 
         .btn-main {
@@ -201,32 +234,85 @@
         .btn-back { background: transparent; border: 1px solid var(--border-color); color: white; padding: 10px 20px; border-radius: 20px; transition: 0.2s;}
         .btn-back:hover { background: white; color: black; }
 
-        /* --- 2. 产品 (轮播样式) --- */
-        .product-layout { display: flex; gap: 60px; align-items: center; }
+        /* --- 2. 产品 (宽幅大图 + 底部排版) --- */
+        .product-layout { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 40px; 
+        }
+
         .product-img { 
-            flex: 1; 
-            height: 600px; 
-            background: #222; 
-            border-radius: 8px; 
+            width: 100%; 
+            aspect-ratio: 16 / 9; 
+            background: #000; 
+            border-radius: 12px; 
             overflow: hidden; 
             position: relative;
         }
+
         .product-img img { 
             width: 100%; 
             height: 100%; 
             object-fit: cover; 
+            object-position: center;
             transition: opacity 0.4s ease-in-out;
         }
         
+        /* 信息区域重排 */
+        .product-info-container {
+            display: grid;
+            grid-template-columns: 2fr 1fr; 
+            gap: 60px;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        .info-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 20px;
+        }
+        
+        .price-tag { font-size: 2.5rem; color: #4facfe; font-weight: bold; }
+        
+        .product-description p {
+            font-size: 1.1rem;
+            color: #ccc;
+            line-height: 1.8;
+            margin-bottom: 20px;
+        }
+
+        .spec-box {
+            background: #1a1a1a;
+            padding: 30px;
+            border-radius: 12px;
+            border: 1px solid #333;
+        }
+
+        .spec-list li { 
+            padding: 15px 0; 
+            border-bottom: 1px solid #333; 
+            color: #ccc; 
+            display: flex;
+            justify-content: space-between;
+        }
+        .spec-list li strong { color: white; }
+
+        .btn-buy { width: 100%; padding: 20px; background: var(--accent-gradient); border: none; color: white; font-weight: bold; font-size: 1.1rem; border-radius: 4px; margin-top: 20px; transition: 0.3s;}
+        .btn-buy:hover { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(79, 172, 254, 0.4); }
+
+        /* 轮播控件 */
         .slider-btn {
             position: absolute;
             top: 50%;
             transform: translateY(-50%);
-            background: rgba(0,0,0,0.6);
+            background: rgba(0,0,0,0.4); 
             color: white;
             border: none;
-            width: 50px;
-            height: 50px;
+            width: 60px;
+            height: 60px;
             border-radius: 50%;
             font-size: 24px;
             display: flex;
@@ -235,33 +321,29 @@
             z-index: 10;
             cursor: pointer;
             transition: all 0.2s;
+            backdrop-filter: blur(5px);
         }
-        .slider-btn:hover { background: rgba(123, 97, 255, 0.8); }
-        .prev-btn { left: 20px; }
-        .next-btn { right: 20px; }
+        .slider-btn:hover { background: rgba(255, 255, 255, 0.2); }
+        .prev-btn { left: 30px; }
+        .next-btn { right: 30px; }
 
         .slider-dots {
             position: absolute;
-            bottom: 20px;
+            bottom: 30px;
             left: 50%;
             transform: translateX(-50%);
             display: flex;
-            gap: 10px;
+            gap: 12px;
         }
         .dot {
-            width: 10px;
-            height: 10px;
+            width: 12px;
+            height: 12px;
             background: rgba(255,255,255,0.3);
             border-radius: 50%;
             cursor: pointer;
             transition: 0.2s;
         }
         .dot.active { background: white; transform: scale(1.2); }
-
-        .product-info { flex: 1; }
-        .price-tag { font-size: 2rem; color: #4facfe; margin: 20px 0; font-weight: bold; }
-        .spec-list li { padding: 15px 0; border-bottom: 1px solid var(--border-color); color: #ccc; }
-        .btn-buy { width: 100%; padding: 20px; background: var(--accent-gradient); border: none; color: white; font-weight: bold; font-size: 1.1rem; border-radius: 4px; margin-top: 30px; }
 
         /* --- 3. 设计展示 --- */
         .design-grid {
@@ -407,12 +489,24 @@
         </div>
     </header>
 
-    <!-- 1. 官网首页 -->
+    <!-- 1. 官网首页 (背景图片轮播) -->
     <div id="home" class="fade-in">
         <section id="home-hero">
-            <h1 class="hero-title">REDEFINE <br><span class="gradient-text">SILHOUETTE</span></h1>
-            <p class="hero-subtitle">The world's first autonomous clothing manufacturing ecosystem.<br>Design, prototype, and produce in hours, not months.</p>
-            <button class="btn-main" onclick="nav('design')">Explore Collection &rarr;</button>
+            <!-- 背景轮播层 -->
+            <div class="hero-bg">
+                <img src="hero_01.png" class="active">
+                <img src="hero_02.png">
+                <img src="hero_03.png">
+                <!-- 遮罩层，防止背景过亮影响文字 -->
+                <div class="hero-overlay"></div>
+            </div>
+
+            <!-- 文字内容层 -->
+            <div class="hero-content">
+                <h1 class="hero-title">REDEFINE <br><span class="gradient-text">SILHOUETTE</span></h1>
+                <p class="hero-subtitle">The world's first autonomous clothing manufacturing ecosystem.<br>Design, prototype, and produce in hours, not months.</p>
+                <button class="btn-main" onclick="nav('design')">Explore Collection &rarr;</button>
+            </div>
         </section>
 
         <section class="home-grid">
@@ -439,14 +533,16 @@
         </section>
     </div>
 
-    <!-- 2. 产品页面 (图片 png) -->
+    <!-- 2. 产品页面 (全新排版) -->
     <section id="product" class="page-section hidden">
         <div class="container">
             <div class="section-header">
                 <h2 class="section-title">Aether One</h2>
                 <button class="btn-back" onclick="nav('home')">← Back Home</button>
             </div>
+            
             <div class="product-layout">
+                <!-- 上部分：全宽大图轮播 -->
                 <div class="product-img">
                     <img id="product-display-img" src="prod_01.png" alt="The Machine">
                     
@@ -456,21 +552,33 @@
                     <div class="slider-dots">
                         <span class="dot active" id="dot-0"></span>
                         <span class="dot" id="dot-1"></span>
+                        <span class="dot" id="dot-2"></span>
                     </div>
                 </div>
 
-                <div class="product-info">
-                    <div class="badge">FLAGSHIP MODEL</div>
-                    <h1 style="font-size: 2.5rem; margin-top: 10px;">Autonomous Fabricator</h1>
-                    <p style="color: #888; margin-top: 20px;">The Aether One is a compact, industrial-grade clothing production unit designed for home and studio use. It seamlessly integrates weaving, cutting, and stitching into a single automated workflow.</p>
-                    <div class="price-tag">$4,999.00 USD</div>
-                    <ul class="spec-list">
-                        <li><strong>Build Volume:</strong> 1200mm x 800mm</li>
-                        <li><strong>Material Support:</strong> Cotton, Silk, Synthetic Blends, Bio-Fibers</li>
-                        <li><strong>Speed:</strong> Full T-Shirt in 45 minutes</li>
-                        <li><strong>Connectivity:</strong> Wi-Fi 6, EtherLink™ to Workbench</li>
-                    </ul>
-                    <button class="btn-buy" onclick="alert('Added to cart')">Pre-order Now</button>
+                <!-- 下部分：信息网格布局 -->
+                <div class="product-info-container">
+                    <!-- 左列：产品介绍 -->
+                    <div class="product-description">
+                        <div class="info-header">
+                            <h1 style="font-size: 2.5rem; margin: 0;">Autonomous Fabricator</h1>
+                            <div class="badge">FLAGSHIP</div>
+                        </div>
+                        <p>The Aether One represents a paradigm shift in garment manufacturing. By condensing industrial-grade weaving, laser-cutting, and robotic stitching capabilities into a single unit, it empowers creators to move from digital concept to physical reality in hours.</p>
+                        <p>Powered by our proprietary Neural-Weave™ AI, the machine automatically optimizes material usage, ensuring zero-waste production while handling complex geometries that traditional manufacturing cannot achieve.</p>
+                    </div>
+
+                    <!-- 右列：参数与购买 -->
+                    <div class="spec-box">
+                        <div class="price-tag">$4,999.00 <span style="font-size:1rem; color:#666">USD</span></div>
+                        <ul class="spec-list">
+                            <li><strong>Build Volume</strong> <span>1200 x 800 mm</span></li>
+                            <li><strong>Materials</strong> <span>Cotton, Silk, Bio-Fibers</span></li>
+                            <li><strong>Speed</strong> <span>45 mins / T-Shirt</span></li>
+                            <li><strong>Connectivity</strong> <span>Wi-Fi 6, EtherLink™</span></li>
+                        </ul>
+                        <button class="btn-buy" onclick="alert('Added to cart')">Pre-order Now</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -568,8 +676,8 @@
     <section id="clothing-detail" class="page-section hidden">
         <div class="container">
             <button class="btn-back" style="margin-bottom: 20px;" onclick="nav('design')">← Back to Design</button>
-            <div class="product-layout">
-                <div class="product-img">
+            <div class="product-layout" style="flex-direction: row; gap: 60px;"> <!-- 详情页保持左右结构 -->
+                <div class="product-img" style="aspect-ratio: auto; height: 600px;">
                     <img id="detail-img-target" src="" alt="Cloth">
                 </div>
                 <div class="product-info">
@@ -591,29 +699,6 @@
                         <small>Designed by</small>
                         <h4 id="detail-designer-target" style="margin-top:5px;">Designer Name</h4>
                     </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- 3.2 设计师详情 -->
-    <section id="designer-detail" class="page-section hidden">
-        <div class="container">
-            <button class="btn-back" style="margin-bottom: 20px;" onclick="nav('design')">← Back to Design</button>
-            <div style="text-align: center; margin-bottom: 60px;">
-                <img src="https://randomuser.me/api/portraits/men/32.jpg" id="designer-profile-pic" style="width: 120px; height: 120px; border-radius: 50%; border: 2px solid #7b61ff;">
-                <h1 id="designer-profile-name" style="margin-top: 20px;">Name</h1>
-                <p style="color: #888;">Avant-garde Fashion Architect</p>
-            </div>
-            <h3>More from this Creator</h3>
-            <div class="design-grid" style="margin-top: 30px;">
-                <div class="design-card">
-                    <img src="img_01.png" class="dc-image">
-                    <div class="dc-info"><strong>Concept Alpha</strong></div>
-                </div>
-                <div class="design-card">
-                    <img src="img_02.png" class="dc-image">
-                    <div class="dc-info"><strong>Summer Flow</strong></div>
                 </div>
             </div>
         </div>
@@ -735,8 +820,21 @@
             document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
         }
 
+        // --- 首页背景轮播逻辑 ---
+        const heroImages = document.querySelectorAll('.hero-bg img');
+        let currentHeroIndex = 0;
+        
+        // 每 4000ms (4秒) 切换一次
+        setInterval(() => {
+            if(heroImages.length > 0) {
+                heroImages[currentHeroIndex].classList.remove('active');
+                currentHeroIndex = (currentHeroIndex + 1) % heroImages.length;
+                heroImages[currentHeroIndex].classList.add('active');
+            }
+        }, 4000);
+
         // --- 产品图片轮播逻辑 (png) ---
-        const productImages = ['prod_01.png', 'prod_02.png'];
+        const productImages = ['prod_01.png', 'prod_02.png', 'prod_03.png'];
         let currentProdIndex = 0;
 
         function switchProduct(direction) {
@@ -757,7 +855,8 @@
                 
                 // 更新圆点
                 dots.forEach(d => d.classList.remove('active'));
-                document.getElementById(`dot-${currentProdIndex}`).classList.add('active');
+                const activeDot = document.getElementById(`dot-${currentProdIndex}`);
+                if(activeDot) activeDot.classList.add('active');
                 
                 // 淡入
                 imgEl.style.opacity = 1;
