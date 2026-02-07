@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>御窑像素馆 2.5D</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --brick-base: #a64b3f;
+            --brick-dark: #7a2e26;
+            --void-dark: #2d1b19;
+            --floor-color: #5d4037;
+            --floor-light: #6d4c41;
+            
+            --soil-dark: #3e2723;
+            --soil-light: #5d4037;
+            --shard-glow: #00e5ff;
+            
+            --wood-dark: #3e2723;
+            --wood-light: #8d6e63;
+            --iron-black: #1a1a1a;
+            --gold: #f1c40f;
+            --white: #ffffff;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            margin: 0; padding: 0;
+            font-family: 'Press Start 2P', cursive;
+            background-color: var(--void-dark);
+            color: var(--white);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .nes-btn {
+            background: var(--brick-base);
+            color: white;
+            padding: 12px 20px;
+            border: 4px solid var(--iron-black);
+            font-family: inherit; font-size: 10px; cursor: pointer;
+            box-shadow: inset 4px 4px 0 rgba(255,255,255,0.2), inset -4px -4px 0 rgba(0,0,0,0.3);
+            text-transform: uppercase;
+        }
+        .nes-btn:active { transform: translateY(2px); box-shadow: inset 4px 4px 0 rgba(0,0,0,0.3); }
+        .nes-btn.secondary { background: #7f8c8d; } /* 灰色按钮 */
+
+        /* ==================== 场景 1: 博物馆大厅 ==================== */
+        #home-screen {
+            position: relative; 
+            width: 100%; 
+            height: 100%;
+            overflow: hidden;
+            background-color: var(--void-dark);
+            perspective: 1000px; 
+        }
+
+        .room-3d {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transform-style: preserve-3d;
+            pointer-events: none; 
+        }
+        
+        .wall-section, .gallery-layer, .door-container, .floor-section {
+            pointer-events: auto;
+        }
+
+        /* 墙面 */
+        .wall-section {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%;
+            height: 75%; 
+            background-color: var(--brick-base);
+            background-image: 
+                linear-gradient(335deg, rgba(0,0,0,0.15) 23px, transparent 23px),
+                linear-gradient(155deg, rgba(0,0,0,0.15) 23px, transparent 23px),
+                linear-gradient(335deg, rgba(0,0,0,0.15) 23px, transparent 23px),
+                linear-gradient(155deg, rgba(0,0,0,0.15) 23px, transparent 23px);
+            background-size: 48px 48px;
+            background-position: 0px 2px, 4px 35px, 24px 31px, 28px 6px;
+            z-index: 1;
+            box-shadow: inset 0 -40px 100px rgba(0,0,0,0.5); 
+        }
+
+        .arch-shadow {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at 50% 120%, transparent 40%, rgba(45, 27, 25, 0.8) 90%);
+            pointer-events: none;
+        }
+        
+        .side-pillar {
+            position: absolute; top: 0; bottom: 0; width: 60px;
+            background: linear-gradient(to right, rgba(0,0,0,0.6), transparent);
+            z-index: 2; pointer-events: none;
+        }
+        .side-pillar.right { right: 0; background: linear-gradient(to left, rgba(0,0,0,0.6), transparent); }
+
+        /* 地板 */
+        .floor-section {
+            position: absolute;
+            bottom: 0; left: -10%; 
+            width: 120%;
+            height: 25%; 
+            background-color: var(--floor-color);
+            border-top: 6px solid #3e2723;
+            transform-origin: top center;
+            transform: perspective(600px) rotateX(30deg); 
+            background-image: 
+                linear-gradient(45deg, var(--floor-light) 25%, transparent 25%, transparent 75%, var(--floor-light) 75%, var(--floor-light)),
+                linear-gradient(45deg, var(--floor-light) 25%, transparent 25%, transparent 75%, var(--floor-light) 75%, var(--floor-light));
+            background-size: 40px 40px;
+            background-position: 0 0, 20px 20px;
+            z-index: 2;
+            box-shadow: inset 0 20px 50px rgba(0,0,0,0.6);
+        }
+
+        /* 画廊层 */
+        .gallery-layer {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 75%;
+            z-index: 10;
+        }
+
+        /* 画框通用样式 */
+        .frame {
+            position: absolute; background: #fff;
+            border: 6px solid #5d4037; 
+            box-shadow: 1px 1px 0 #3e2723, 2px 2px 0 #3e2723, 3px 3px 0 #3e2723, 4px 4px 0 #3e2723, 6px 6px 10px rgba(0,0,0,0.5);
+            cursor: pointer; transition: transform 0.1s;
+            display: flex; justify-content: center; align-items: center; padding: 4px;
+            aspect-ratio: 1 / 1; /* 1:1 正方形 */
+        }
+        .frame:hover { transform: translateY(-2px); border-color: var(--gold); z-index: 50; }
+        
+        .frame-inner {
+            width: 100%; height: 100%; background: #585858;
+            position: relative; overflow: hidden; image-rendering: pixelated;
+        }
+        .frame-inner img { width: 100%; height: 100%; object-fit: cover; display: none; }
+        .frame-inner.unlocked img { display: block; }
+        .frame-inner.locked::after {
+            content: "?"; position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%); color: rgba(255,255,255,0.3); font-size: 20px;
+        }
+
+        /* 8个画框布局 (无重叠) */
+        .f-1 { top: 6%; left: 4%; width: 15%; }
+        .f-2 { top: 8%; left: 28%; width: 11%; }
+        .f-3 { top: 8%; right: 28%; width: 11%; }
+        .f-4 { top: 6%; right: 4%; width: 15%; }
+        .f-5 { top: 38%; left: 8%; width: 13%; }
+        .f-6 { top: 38%; right: 8%; width: 13%; }
+        .f-7 { top: 60%; left: 10%; width: 10%; }
+        .f-8 { top: 60%; right: 10%; width: 10%; }
+
+        /* 门 - 巨大化 */
+        .door-container {
+            position: absolute; 
+            bottom: 25%; left: 50%; transform: translateX(-50%);
+            width: 280px; 
+            height: 360px; 
+            z-index: 15; cursor: pointer;
+        }
+        .pixel-door {
+            width: 100%; height: 100%; background: var(--wood-dark);
+            border-radius: 140px 140px 0 0; 
+            border: 6px solid var(--iron-black); border-bottom: none;
+            position: relative; 
+            box-shadow: 4px 0 0 #2d1b19, 8px 0 0 #2d1b19, 0 -2px 10px rgba(0,0,0,0.5);
+            display: flex; justify-content: center; align-items: flex-end; 
+            transition: filter 0.2s;
+        }
+        .door-container:hover .pixel-door { filter: brightness(1.2); }
+        .door-panel {
+            width: 85%; height: 92%; background: var(--wood-light);
+            border: 4px solid #3e2723; border-radius: 120px 120px 0 0; position: relative;
+            background-image: repeating-linear-gradient(90deg, transparent, transparent 10px, rgba(0,0,0,0.1) 10px, rgba(0,0,0,0.1) 12px);
+        }
+        .knob {
+            position: absolute; top: 60%; right: 20px; width: 20px; height: 20px;
+            background: var(--gold); border: 4px solid #000; border-radius: 50%;
+            box-shadow: 4px 4px 0 rgba(0,0,0,0.5);
+        }
+        .door-tip {
+            position: absolute; bottom: 40px;
+            width: 100%; text-align: center;
+            font-size: 14px; color: #ebdcb2;
+            text-shadow: 2px 2px 0 #000;
+            animation: blink 2s infinite;
+        }
+        @keyframes blink { 0%,100% {opacity:1} 50% {opacity:0.5} }
+
+        /* 吉祥物 - 再次巨大化 (约 260px 宽) */
+        .mascot-wrapper {
+            position: absolute; 
+            z-index: 100;
+            width: 260px; height: 430px; /* 原来130，现在260 */
+            top: 85%; left: 20%;
+            pointer-events: auto; /* 允许点击互动 */
+            cursor: pointer;
+            transition: top linear, left linear, transform linear;
+            will-change: top, left, transform;
+        }
+        .mascot-sprite { position: relative; width: 100%; height: 100%; transform-origin: bottom center; }
+        .mascot-img { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; position: relative; top: -5px; pointer-events: none; }
+        .shadow { position: absolute; bottom: 0px; left: 10%; width: 80%; height: 30px; background: rgba(0,0,0,0.4); border-radius: 50%; z-index: -1; transform: scale(1); }
+        
+        .mascot-wrapper.moving .mascot-sprite { animation: hop 0.4s infinite alternate; }
+        .mascot-wrapper.moving .shadow { animation: shadow-scale 0.4s infinite alternate; }
+        .mascot-wrapper.super-jump .mascot-sprite { animation: super-hop 0.5s ease-out; }
+        .mascot-wrapper.super-jump .shadow { animation: super-shadow 0.5s ease-out; }
+        
+        @keyframes hop { 0% { transform: translateY(0); } 100% { transform: translateY(-20px); } }
+        @keyframes shadow-scale { 0% { transform: scale(1); opacity: 0.4; } 100% { transform: scale(0.6); opacity: 0.2; } }
+        @keyframes super-hop { 0% { transform: translateY(0) scale(1); } 40% { transform: translateY(-150px) scale(1.1); } 50% { transform: translateY(-150px) scale(1.1); } 100% { transform: translateY(0) scale(1); } }
+        @keyframes super-shadow { 0% { transform: scale(1); opacity: 0.4; } 40% { transform: scale(0.3); opacity: 0.1; } 100% { transform: scale(1); opacity: 0.4; } }
+
+        /* ==================== 场景 2: 挖掘现场 ==================== */
+        #excavation-screen {
+            display: none;
+            width: 100%; height: 100%;
+            background-color: var(--soil-dark);
+            background-image: 
+                radial-gradient(var(--soil-light) 15%, transparent 16%),
+                radial-gradient(var(--soil-light) 15%, transparent 16%);
+            background-size: 60px 60px;
+            background-position: 0 0, 30px 30px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .excavation-nav {
+            position: absolute; top: 20px; left: 20px; z-index: 100;
+        }
+
+        .shard-container {
+            position: absolute;
+            width: 60px; height: 60px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .shard-container:hover { transform: scale(1.1); }
+
+        .active-shard {
+            width: 100%; height: 100%;
+            background: var(--shard-glow);
+            clip-path: polygon(20% 0%, 80% 10%, 100% 35%, 85% 75%, 50% 100%, 15% 85%, 0% 35%);
+            animation: glow 1.5s infinite alternate;
+            box-shadow: 0 0 15px var(--shard-glow);
+            display: flex; justify-content: center; align-items: center;
+            color: #000; font-size: 20px; font-weight: bold;
+        }
+        @keyframes glow { from { filter: brightness(1); transform: translateY(0); } to { filter: brightness(1.3); transform: translateY(-5px); } }
+
+        .restored-artifact {
+            width: 100%; height: 100%;
+            background: var(--gold);
+            border: 2px solid #fff;
+            border-radius: 5px;
+            box-shadow: 0 5px 0 rgba(0,0,0,0.4);
+            display: flex; justify-content: center; align-items: center;
+            font-size: 20px;
+        }
+
+        /* ==================== 场景 3: 游戏界面 ==================== */
+        #game-screen { display: none; width: 100%; height: 100%; background: #2d3436; flex-direction: column; overflow-y: auto; }
+        .game-nav { background: var(--iron-black); padding: 15px; border-bottom: 4px solid var(--brick-base); display: flex; justify-content: space-between; align-items: center; font-size: 10px; }
+        .game-content { flex: 1; display: flex; justify-content: center; align-items: center; gap: 40px; padding: 20px; flex-wrap: wrap; }
+        .puzzle-frame { padding: 10px; background: var(--brick-base); border: 4px solid var(--white); box-shadow: 10px 10px 0 var(--iron-black); }
+        #puzzle-board { display: grid; width: 400px; height: 400px; background: #000; gap: 2px; }
+        .tile { cursor: pointer; background-size: 400px 400px; transition: filter 0.1s; }
+        .tile:hover { filter: brightness(1.2); outline: 2px solid var(--gold); z-index: 10; }
+        .tile.selected { filter: sepia(1) hue-rotate(-50deg) saturate(3); outline: 4px dashed #fff; z-index: 20; animation: pulse 0.5s infinite alternate; }
+        @keyframes pulse { from { transform: scale(0.95); } to { transform: scale(1.0); } }
+        .side-info { display: flex; flex-direction: column; align-items: center; color: #ccc; }
+        .preview-img-box { width: 150px; height: 150px; border: 4px solid var(--wood-light); background: #000; margin-bottom: 20px; }
+        .preview-img-box img { width: 100%; height: 100%; object-fit: cover; opacity: 0.6; }
+
+        @media (max-width: 768px) {
+            #home-screen { height: auto; min-height: 100vh; overflow-y: auto; }
+            .room-3d { height: 100vh; overflow: hidden; } 
+            .wall-section { height: 70%; }
+            .floor-section { height: 30%; transform: perspective(400px) rotateX(20deg); bottom: 0; width: 100%; left: 0; }
+            /* 手机端门可以稍微小一点 */
+            .door-container { bottom: 30%; transform: translateX(-50%) scale(0.7); } 
+            .gallery-layer { 
+                position: relative; height: auto; display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; 
+                padding: 100px 10px 20px 10px; 
+            }
+            .frame { position: relative; top: auto !important; left: auto !important; right: auto !important; width: 100px; height: 100px; }
+            .mascot-wrapper { z-index: 200; transform: scale(0.6) !important; } 
+            #puzzle-board { width: 300px; height: 300px; }
+            .tile { background-size: 300px 300px !important; }
+            .game-content { flex-direction: column-reverse; }
+        }
+
+        /* 弹窗 */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; justify-content: center; align-items: center; z-index: 500; }
+        .pixel-card { background: var(--white); color: var(--iron-black); border: 4px solid var(--brick-base); padding: 30px; text-align: center; max-width: 90%; box-shadow: 0 0 50px rgba(166, 75, 63, 0.5); position: relative; }
+        .view-image { width: 320px; max-width: 90%; }
+        .view-image img { width: 100%; border: 4px solid var(--wood-light); margin-bottom: 10px; }
+        .close-btn { position: absolute; top: -15px; right: -15px; background: #c0392b; color: white; border: 4px solid var(--iron-black); width: 30px; height: 30px; line-height: 20px; cursor: pointer; text-align: center; font-weight: bold; }
+        
+        /* 通关弹窗按钮组 */
+        .modal-btn-group { display: flex; gap: 15px; justify-content: center; margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+<!-- 场景1: 博物馆大厅 -->
+<div id="home-screen">
+    <div class="room-3d">
+        <div class="wall-section">
+            <div class="arch-shadow"></div>
+            <div class="side-pillar"></div>
+            <div class="side-pillar right"></div>
+        </div>
+        <div class="gallery-layer" id="gallery-wall"></div>
+        <div class="door-container" id="door">
+            <div class="pixel-door">
+                <div class="door-panel">
+                    <div class="knob"></div>
+                    <div class="door-tip">TO EXCAVATION</div>
+                </div>
+            </div>
+        </div>
+        <div class="floor-section"></div>
+    </div>
+    <div id="mascot" class="mascot-wrapper">
+        <div class="shadow"></div>
+        <div class="mascot-sprite">
+            <img src="./duck.png" alt="Duck Mascot" class="mascot-img">
+        </div>
+    </div>
+</div>
+
+<!-- 场景2: 挖掘现场 -->
+<div id="excavation-screen">
+    <div class="excavation-nav">
+        <button class="nes-btn" onclick="showMuseum()">◀ MUSEUM HALL</button>
+    </div>
+    <div id="shards-field">
+        <!-- 碎片JS生成 -->
+    </div>
+</div>
+
+<!-- 场景3: 拼图游戏 -->
+<div id="game-screen">
+    <div class="game-nav">
+        <div style="cursor:pointer; color:var(--brick-base);" onclick="showExcavation()">◀ EXCAVATION SITE</div>
+        <div id="level-display">LEVEL 1</div>
+        <div id="moves-display">MOVES: 0</div>
+    </div>
+    <div class="game-content">
+        <div class="puzzle-frame">
+            <div id="puzzle-board"></div>
+        </div>
+        <div class="side-info">
+            <div style="font-size:10px; margin-bottom:5px;">TARGET</div>
+            <div class="preview-img-box"><img id="preview-img" src=""></div>
+            <button class="nes-btn" onclick="resetLevel()">RETRY</button>
+        </div>
+    </div>
+</div>
+
+<!-- 弹窗 -->
+<div id="gallery-modal" class="modal-overlay">
+    <div class="pixel-card view-image">
+        <div class="close-btn" onclick="closeGalleryModal()">X</div>
+        <h3 id="gallery-title" style="font-size: 12px; margin-bottom: 15px; color: var(--brick-base);">ARTIFACT</h3>
+        <div id="gallery-content"></div>
+        <p id="gallery-desc" style="font-size: 8px; color: #666; margin-top: 10px; line-height: 1.5;"></p>
+    </div>
+</div>
+
+<div id="win-modal" class="modal-overlay">
+    <div class="pixel-card">
+        <h2 id="modal-title" style="color:var(--brick-base); margin-bottom:15px;">RESTORED!</h2>
+        <p id="modal-desc" style="font-size:10px; margin-bottom:20px;">Artifact restored successfully.</p>
+        <div class="modal-btn-group">
+            <button id="modal-next-btn" class="nes-btn">NEXT LEVEL</button>
+            <button id="modal-exit-btn" class="nes-btn secondary">EXIT</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const totalLevels = 8;
+    const levelConfigs = [
+        { id: 1, grid: 3 },
+        { id: 2, grid: 3 },
+        { id: 3, grid: 3 },
+        { id: 4, grid: 4 },
+        { id: 5, grid: 4 },
+        { id: 6, grid: 4 },
+        { id: 7, grid: 5 },
+        { id: 8, grid: 5 }
+    ];
+
+    let currentLevel = 1;
+    let unlockedLevels = 1;
+    let gameImages = {};
+    let moves = 0;
+    let selectedTile = null;
+    let isLocked = false;
+    let mascotTimer = null;
+
+    const homeScreen = document.getElementById('home-screen');
+    const excavationScreen = document.getElementById('excavation-screen');
+    const gameScreen = document.getElementById('game-screen');
+    const mascot = document.getElementById('mascot');
+    const galleryWall = document.getElementById('gallery-wall');
+    const shardsField = document.getElementById('shards-field');
+    const puzzleBoard = document.getElementById('puzzle-board');
+    const previewImg = document.getElementById('preview-img');
+    const winModal = document.getElementById('win-modal');
+    const galleryModal = document.getElementById('gallery-modal');
+
+    // 预定义的碎片位置
+    const shardPositions = [
+        {top: 20, left: 10}, {top: 15, left: 60},
+        {top: 40, left: 25}, {top: 35, left: 80},
+        {top: 60, left: 10}, {top: 55, left: 50},
+        {top: 80, left: 30}, {top: 75, left: 75}
+    ];
+
+    window.onload = () => {
+        loadData();
+        renderGallery();
+        renderExcavationSite();
+        initMascotBehavior();
+    };
+
+    function showMuseum() {
+        gameScreen.style.display = 'none';
+        excavationScreen.style.display = 'none';
+        homeScreen.style.display = 'block';
+        renderGallery();
+    }
+
+    function showExcavation() {
+        gameScreen.style.display = 'none';
+        homeScreen.style.display = 'none';
+        excavationScreen.style.display = 'block';
+        renderExcavationSite();
+    }
+
+    function initMascotBehavior() {
+        startWandering();
+        mascot.addEventListener('click', (e) => {
+            e.stopPropagation(); 
+            mascot.classList.add('super-jump');
+            setTimeout(() => { mascot.classList.remove('super-jump'); }, 500); 
+        });
+    }
+
+    function startWandering() {
+        const waitTime = 1000 + Math.random() * 3000;
+        mascotTimer = setTimeout(() => { moveMascotRandomly(); startWandering(); }, waitTime);
+    }
+
+    function moveMascotRandomly() {
+        const screenWidth = window.innerWidth;
+        const screenHeight = window.innerHeight;
+        const floorTopLimit = screenHeight * 0.75; 
+        const floorBottomLimit = screenHeight - 80; 
+        
+        const minX = 20;
+        const maxX = screenWidth - 80;
+        const targetX = minX + Math.random() * (maxX - minX);
+        const targetY = floorTopLimit + Math.random() * (floorBottomLimit - floorTopLimit);
+
+        const rect = mascot.getBoundingClientRect();
+        const currentX = rect.left;
+        const currentY = rect.top;
+        const dx = targetX - currentX;
+        const dy = targetY - currentY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        const speed = 0.1; 
+        const duration = distance / speed; 
+        
+        mascot.style.transitionDuration = `${duration}ms`;
+        // 校正超大鸭子的位置，使其脚部着地
+        // 宽度260 -> 中心偏移130
+        // 高度430 -> 底部偏移430
+        mascot.style.left = `${targetX - 130}px`;
+        mascot.style.top = `${targetY - 430}px`;
+
+        const maxTravel = floorBottomLimit - floorTopLimit;
+        const currentPos = targetY - floorTopLimit;
+        let scaleFactor = 0.7 + (currentPos / maxTravel) * 0.4; 
+        scaleFactor = Math.max(0.6, Math.min(scaleFactor, 1.2));
+        const flip = (targetX < currentX) ? 1 : -1; 
+        mascot.style.transform = `scale(${scaleFactor}) scaleX(${flip})`;
+
+        mascot.classList.add('moving');
+        setTimeout(() => { mascot.classList.remove('moving'); }, duration);
+    }
+
+    function loadData() {
+        const savedLvl = localStorage.getItem('impKilnLevel_v7_png');
+        if (savedLvl) unlockedLevels = parseInt(savedLvl);
+        
+        levelConfigs.forEach(cfg => {
+            gameImages[cfg.id] = `./${cfg.id}.png`; // png format
+        });
+    }
+
+    function renderGallery() {
+        galleryWall.innerHTML = '';
+        for(let i=1; i<=totalLevels; i++) {
+            const frame = document.createElement('div');
+            frame.className = `frame f-${i}`;
+            const inner = document.createElement('div');
+            inner.className = 'frame-inner';
+            
+            if(i < unlockedLevels) {
+                inner.classList.add('unlocked');
+                const img = document.createElement('img');
+                img.src = gameImages[i];
+                inner.appendChild(img);
+                frame.title = "View Artifact " + i;
+            } else {
+                inner.classList.add('locked');
+                frame.title = "Unknown Artifact";
+            }
+            frame.onclick = () => openGalleryModal(i);
+            frame.appendChild(inner);
+            galleryWall.appendChild(frame);
+        }
+        document.getElementById('door').onclick = showExcavation;
+    }
+
+    function renderExcavationSite() {
+        shardsField.innerHTML = '';
+        for(let i=1; i<=totalLevels; i++) {
+            const container = document.createElement('div');
+            container.className = 'shard-container';
+            const pos = shardPositions[i-1];
+            const randTop = pos.top + (Math.random() * 4 - 2);
+            const randLeft = pos.left + (Math.random() * 4 - 2);
+            
+            container.style.top = `${randTop}%`;
+            container.style.left = `${randLeft}%`;
+
+            if (i < unlockedLevels) {
+                const artifact = document.createElement('div');
+                artifact.className = 'restored-artifact';
+                artifact.innerText = '★';
+                container.appendChild(artifact);
+                container.title = "Play again (Completed)";
+            } else {
+                const shard = document.createElement('div');
+                shard.className = 'active-shard';
+                shard.innerText = '!';
+                container.appendChild(shard);
+                container.title = "Play Level " + i;
+            }
+
+            container.onclick = () => enterGame(i);
+            shardsField.appendChild(container);
+        }
+    }
+
+    function enterGame(level) {
+        if(level > totalLevels) return;
+        currentLevel = level;
+        homeScreen.style.display = 'none';
+        excavationScreen.style.display = 'none';
+        gameScreen.style.display = 'flex';
+        winModal.style.display = 'none';
+        galleryModal.style.display = 'none';
+        
+        document.getElementById('level-display').innerText = `LEVEL ${currentLevel}`;
+        moves = 0; document.getElementById('moves-display').innerText = `MOVES: 0`;
+        const imgUrl = gameImages[currentLevel];
+        previewImg.src = imgUrl;
+        createPuzzle(levelConfigs[currentLevel-1].grid, imgUrl);
+    }
+
+    function resetLevel() { if(confirm("Retry?")) enterGame(currentLevel); }
+
+    function createPuzzle(grid, url) {
+        puzzleBoard.innerHTML = ''; selectedTile = null; isLocked = false;
+        const isMobile = window.innerWidth <= 600;
+        const size = isMobile ? 300 : 400;
+        puzzleBoard.style.width = size + 'px'; puzzleBoard.style.height = size + 'px';
+        puzzleBoard.style.gridTemplateColumns = `repeat(${grid}, 1fr)`;
+        const count = grid * grid;
+        let indices = [...Array(count).keys()];
+        do { indices.sort(() => Math.random() - 0.5); } while(indices.every((v, i) => v === i));
+
+        for(let i=0; i<count; i++) {
+            const tile = document.createElement('div');
+            tile.className = 'tile'; tile.dataset.ori = indices[i];
+            tile.style.backgroundImage = `url(${url})`; tile.style.backgroundSize = `${size}px ${size}px`;
+            const ori = indices[i];
+            tile.style.backgroundPosition = grid > 1 ? `${(ori%grid/(grid-1))*100}% ${(Math.floor(ori/grid)/(grid-1))*100}%` : '0 0';
+            tile.onclick = (e) => handleTileClick(e.target);
+            puzzleBoard.appendChild(tile);
+        }
+    }
+
+    function handleTileClick(tile) {
+        if(isLocked) return;
+        if(selectedTile === tile) { tile.classList.remove('selected'); selectedTile = null; return; }
+        if(!selectedTile) { selectedTile = tile; tile.classList.add('selected'); }
+        else {
+            const bg = selectedTile.style.backgroundPosition; const ori = selectedTile.dataset.ori;
+            selectedTile.style.backgroundPosition = tile.style.backgroundPosition; selectedTile.dataset.ori = tile.dataset.ori;
+            tile.style.backgroundPosition = bg; tile.dataset.ori = ori;
+            selectedTile.classList.remove('selected'); selectedTile = null;
+            moves++; document.getElementById('moves-display').innerText = `MOVES: ${moves}`;
+            let win = true; document.querySelectorAll('.tile').forEach((t, i) => { if(parseInt(t.dataset.ori) !== i) win = false; });
+            if(win) { isLocked = true; setTimeout(showWinModal, 300); }
+        }
+    }
+
+    function showWinModal() {
+        if(currentLevel >= unlockedLevels) { 
+            unlockedLevels = currentLevel + 1; 
+            localStorage.setItem('impKilnLevel_v7_png', unlockedLevels); 
+        }
+        winModal.style.display = 'flex';
+        
+        const nextBtn = document.getElementById('modal-next-btn');
+        const exitBtn = document.getElementById('modal-exit-btn');
+        
+        // 配置 "下一关" 按钮
+        if(currentLevel < totalLevels) {
+            nextBtn.style.display = 'inline-block';
+            nextBtn.onclick = () => enterGame(currentLevel + 1);
+        } else {
+            nextBtn.style.display = 'none'; // 最后一关隐藏下一关按钮
+        }
+        
+        // 配置 "退出" 按钮
+        exitBtn.onclick = showExcavation;
+    }
+
+    function openGalleryModal(level) {
+        const titleEl = document.getElementById('gallery-title');
+        const contentEl = document.getElementById('gallery-content');
+        const descEl = document.getElementById('gallery-desc');
+        galleryModal.style.display = 'flex';
+        contentEl.innerHTML = '';
+        if (level < unlockedLevels) {
+            titleEl.innerText = `ARTIFACT #${level}`;
+            const img = document.createElement('img');
+            img.src = gameImages[level];
+            contentEl.appendChild(img);
+            descEl.innerText = "Fragment successfully restored.";
+        } else {
+            titleEl.innerText = "???";
+            const placeholder = document.createElement('div');
+            placeholder.style.height = '150px'; placeholder.style.background = '#333';
+            placeholder.style.display = 'flex'; placeholder.style.alignItems = 'center'; placeholder.style.justifyContent = 'center';
+            placeholder.style.color = '#666'; placeholder.style.fontSize = '30px'; placeholder.innerText = '?';
+            contentEl.appendChild(placeholder);
+            descEl.innerText = "Not yet discovered.";
+        }
+    }
+    function closeGalleryModal() { galleryModal.style.display = 'none'; }
+</script>
+</body>
+</html>
